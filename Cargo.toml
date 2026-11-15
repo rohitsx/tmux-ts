@@ -4,6 +4,7 @@ version = "0.1.0"
 edition = "2021"
 description = "Blazing-fast tmux session switcher / creator / killer TUI (ts, tn, tk)"
 repository = "https://github.com/rohitsx/tmux-ts"
+license-file = "LICENSE"
 
 [[bin]]
 name = "ts"

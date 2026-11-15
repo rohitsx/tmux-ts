@@ -53,3 +53,12 @@ bind X display-popup -E -w 70 -h 60% "tk"   # prefix + X  → kill
   same call as `list-sessions`), then `exec` into `tmux switch-client` / `attach-session`,
   so `ts` isn't even resident while you're in the session.
 - Start → first frame ≈ 3 ms of our own time on top of tmux's ~3 ms process spawn.
+
+## License
+
+[PolyForm Noncommercial 1.0.0](LICENSE) — free to use, copy, modify and share for any
+**non-commercial** purpose (personal use, hobby projects, study, research, charities, schools,
+public and government bodies). **Commercial use is not permitted**, including use as part of work
+for a for-profit company. If you need a commercial license, open an issue.
+
+This is a source-available license, not an OSI-approved "open source" one.

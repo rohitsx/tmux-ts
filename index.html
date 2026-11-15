@@ -240,6 +240,7 @@ bind X display-popup -E -w 70 -h 60% "tk"   <span class="cm"># prefix + X → ki
     <details><summary>Inside vs. outside tmux</summary><p>Inside tmux, <code>ts</code> uses <code>switch-client</code> and tags the session you're in as <em>current</em>; the cursor starts on the most recently active <em>other</em> session. Outside tmux it uses <code>attach-session</code> / <code>new-session</code>, and with no tmux server running, <code>ts</code> and <code>tn</code> go straight to the new-session prompt.</p></details>
     <details><summary>The terminal looks odd after a crash</summary><p>Run <code>reset</code>. <code>ts</code> restores the terminal on every normal exit, but a hard kill (<code>kill -9</code>) can't clean up after itself.</p></details>
     <details><summary>Where's the config file?</summary><p>There isn't one — by design. Colours are the standard 16 ANSI colours plus one 256-colour highlight.</p></details>
+    <details><summary>License — can I use it at work?</summary><p>tmux-ts is under the <a href="https://polyformproject.org/licenses/noncommercial/1.0.0">PolyForm Noncommercial License 1.0.0</a>. You may use, copy, modify and share it for any non-commercial purpose: personal use, hobby projects, study, research, and use by charities, schools, public research and government bodies. Commercial use — including using it as part of work for a for-profit company — isn't covered; <a href="https://github.com/rohitsx/tmux-ts/issues">open an issue</a> if you need a commercial license. It is source-available, not OSI "open source".</p></details>
     <details><summary>Uninstall</summary><p><code>rm ~/.local/bin/{ts,tn,tk}</code> (or the same names in <code>/usr/local/bin</code> with <code>sudo</code>).</p></details>
   </div>
 </section>
@@ -247,7 +248,7 @@ bind X display-popup -E -w 70 -h 60% "tk"   <span class="cm"># prefix + X → ki
 
 <footer>
   <div class="wrap">
-    <a href="https://github.com/rohitsx/tmux-ts">github.com/rohitsx/tmux-ts</a> · Written in Rust.
+    <a href="https://github.com/rohitsx/tmux-ts">github.com/rohitsx/tmux-ts</a> · Written in Rust · Free for non-commercial use under <a href="https://polyformproject.org/licenses/noncommercial/1.0.0">PolyForm Noncommercial 1.0.0</a>.
   </div>
 </footer>
 
