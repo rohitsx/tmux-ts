@@ -1,5 +1,7 @@
 # ts — fast tmux session switcher
 
+**Docs:** https://rohitsx.github.io/tmux-ts/
+
 One tiny Rust binary (~400 KB, only dependency: `libc`), three commands:
 
 | command | what it does |
@@ -13,8 +15,12 @@ One tiny Rust binary (~400 KB, only dependency: `libc`), three commands:
 ## Install
 
 ```sh
+git clone https://github.com/rohitsx/tmux-ts.git && cd tmux-ts
 ./install.sh        # builds and puts ts/tn/tk in ~/.local/bin
 ```
+
+System-wide (`/usr/local/bin`): build as yourself, then
+`sudo install -m755 target/release/ts /usr/local/bin/ts && sudo ln -sf ts /usr/local/bin/tn && sudo ln -sf ts /usr/local/bin/tk`.
 
 ## Keys
 

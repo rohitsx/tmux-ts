@@ -59,7 +59,12 @@
   h3 { margin: 28px 0 8px; font-size: 17px; }
 
   /* terminal mocks */
-  .grid3 { display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(270px, 1fr)); }
+  .grid3 { display: grid; gap: 16px; grid-template-columns: 1.25fr 1fr; align-items: start; }
+  .grid3 > figure:first-child { grid-row: span 2; }
+  @media (max-width: 720px) {
+    .grid3 { grid-template-columns: 1fr; }
+    .grid3 > figure:first-child { grid-row: auto; }
+  }
   figure.term { margin: 0; }
   figure.term figcaption { font-size: 13px; color: var(--muted); margin: 8px 2px 0; }
   .term pre {
