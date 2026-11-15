@@ -1,0 +1,19 @@
+[package]
+name = "t-ls"
+version = "0.1.0"
+edition = "2021"
+description = "Blazing-fast tmux session switcher / creator / killer TUI"
+
+[[bin]]
+name = "ts"
+path = "src/main.rs"
+
+[dependencies]
+libc = "0.2"
+
+[profile.release]
+opt-level = 3
+lto = "fat"
+codegen-units = 1
+panic = "abort"
+strip = true
