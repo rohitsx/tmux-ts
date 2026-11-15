@@ -1,0 +1,261 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>tmux-ts — fast tmux session switcher</title>
+<meta name="description" content="ts, tn and tk: a blazing-fast tmux session switcher, creator and killer. One ~400 KB Rust binary, ~7 ms to first frame.">
+<style>
+  :root {
+    --bg: #fbfbfa; --fg: #1c1d1f; --muted: #62666d; --line: #e4e4e0;
+    --card: #ffffff; --accent: #0b7a75; --accent-fg: #ffffff;
+    --term-bg: #16181d; --term-fg: #d7dae0; --term-dim: #7c828d; --term-sel: #2c313a;
+    --term-cyan: #56c8d8; --term-green: #7ec699; --term-yellow: #e5c07b; --term-red: #f07178;
+    --code-bg: #f0f0ec;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0f1115; --fg: #e6e7ea; --muted: #9aa0aa; --line: #262a31;
+      --card: #161920; --accent: #3fc1b8; --accent-fg: #06201e;
+      --term-bg: #0a0b0e; --code-bg: #1b1e25;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0f1115; --fg: #e6e7ea; --muted: #9aa0aa; --line: #262a31;
+    --card: #161920; --accent: #3fc1b8; --accent-fg: #06201e;
+    --term-bg: #0a0b0e; --code-bg: #1b1e25;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0; background: var(--bg); color: var(--fg);
+    font: 16px/1.6 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  }
+  .mono, code, pre, kbd { font-family: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace; }
+  a { color: var(--accent); }
+  .wrap { max-width: 920px; margin: 0 auto; padding: 0 16px; }
+
+  header.top { border-bottom: 1px solid var(--line); position: sticky; top: 0; background: var(--bg); z-index: 5; }
+  header.top .wrap { display: flex; align-items: center; gap: 20px; height: 54px; }
+  header.top .brand { font-weight: 700; text-decoration: none; color: var(--fg); letter-spacing: -0.01em; }
+  header.top nav { display: flex; gap: 16px; margin-left: auto; font-size: 14px; overflow-x: auto; }
+  header.top nav a { color: var(--muted); text-decoration: none; white-space: nowrap; }
+  header.top nav a:hover { color: var(--fg); }
+
+  .hero { padding: 64px 0 40px; }
+  .hero h1 { font-size: clamp(34px, 6vw, 54px); line-height: 1.08; margin: 0 0 16px; letter-spacing: -0.03em; }
+  .hero h1 em { font-style: normal; color: var(--accent); }
+  .hero p.lead { font-size: 19px; color: var(--muted); max-width: 620px; margin: 0 0 28px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 28px; padding: 0; list-style: none; }
+  .chips li { border: 1px solid var(--line); background: var(--card); border-radius: 999px; padding: 4px 12px; font-size: 13px; color: var(--muted); }
+  .chips b { color: var(--fg); font-weight: 600; }
+  .cta { display: flex; flex-wrap: wrap; gap: 10px; }
+  .btn { display: inline-block; padding: 10px 18px; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 15px; border: 1px solid var(--line); color: var(--fg); background: var(--card); }
+  .btn.primary { background: var(--accent); color: var(--accent-fg); border-color: var(--accent); }
+
+  section { padding: 40px 0; border-top: 1px solid var(--line); }
+  section h2 { font-size: 26px; letter-spacing: -0.02em; margin: 0 0 8px; }
+  section > .wrap > p.sub { color: var(--muted); margin: 0 0 24px; max-width: 640px; }
+  h3 { margin: 28px 0 8px; font-size: 17px; }
+
+  /* terminal mocks */
+  .grid3 { display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(270px, 1fr)); }
+  figure.term { margin: 0; }
+  figure.term figcaption { font-size: 13px; color: var(--muted); margin: 8px 2px 0; }
+  .term pre {
+    margin: 0; background: var(--term-bg); color: var(--term-fg); border-radius: 10px;
+    padding: 14px 0; font-size: 12.5px; line-height: 1.55; overflow-x: auto; border: 1px solid var(--line);
+  }
+  .term .l { display: block; padding: 0 14px; white-space: pre; min-height: 1.55em; }
+  .term .sel { background: var(--term-sel); }
+  .term .d { color: var(--term-dim); } .term .c { color: var(--term-cyan); } .term .g { color: var(--term-green); }
+  .term .y { color: var(--term-yellow); } .term .r { color: var(--term-red); } .term .b { font-weight: 700; }
+
+  /* cards / tables */
+  .cards { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 16px 18px; }
+  .card h3 { margin: 0 0 6px; font-size: 16px; }
+  .card p { margin: 0; color: var(--muted); font-size: 15px; }
+  .card code.cmd { display: inline-block; background: var(--accent); color: var(--accent-fg); padding: 1px 8px; border-radius: 6px; font-size: 15px; margin-right: 6px; }
+
+  table { width: 100%; border-collapse: collapse; font-size: 15px; background: var(--card); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+  th, td { text-align: left; padding: 9px 14px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { font-size: 12px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); background: var(--bg); }
+  tr:last-child td { border-bottom: 0; }
+  .tablewrap { overflow-x: auto; }
+  kbd { background: var(--code-bg); border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 5px; padding: 0 6px; font-size: 13px; white-space: nowrap; }
+
+  code { background: var(--code-bg); padding: 1px 6px; border-radius: 5px; font-size: 0.9em; }
+  .code { position: relative; margin: 12px 0; }
+  .code pre { margin: 0; background: var(--code-bg); border: 1px solid var(--line); border-radius: 10px; padding: 14px 70px 14px 16px; overflow-x: auto; font-size: 13.5px; line-height: 1.6; }
+  .code pre code { background: none; padding: 0; font-size: inherit; }
+  .code button { position: absolute; top: 8px; right: 8px; font: inherit; font-size: 12px; padding: 3px 10px; border-radius: 6px; border: 1px solid var(--line); background: var(--card); color: var(--muted); cursor: pointer; }
+  .code button:hover { color: var(--fg); }
+  .code .cm { color: var(--muted); }
+
+  ul.plain { padding-left: 20px; } ul.plain li { margin: 6px 0; }
+  .note { border-left: 3px solid var(--accent); background: var(--card); padding: 10px 16px; border-radius: 0 8px 8px 0; color: var(--muted); font-size: 15px; margin: 16px 0; }
+  details { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 12px 16px; margin: 10px 0; }
+  summary { cursor: pointer; font-weight: 600; }
+  details p { margin: 10px 0 0; color: var(--muted); }
+  footer { border-top: 1px solid var(--line); padding: 28px 0 48px; color: var(--muted); font-size: 14px; }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="wrap">
+    <a class="brand mono" href="#">tmux-ts</a>
+    <nav aria-label="Sections">
+      <a href="#install">Install</a>
+      <a href="#commands">Commands</a>
+      <a href="#keys">Keys</a>
+      <a href="#bindings">tmux bindings</a>
+      <a href="#how">How it works</a>
+      <a href="https://github.com/rohitsx/tmux-ts">GitHub</a>
+    </nav>
+  </div>
+</header>
+
+<main>
+<div class="wrap hero">
+  <h1>Jump between tmux sessions <em>instantly</em>.</h1>
+  <p class="lead">Three tiny commands — <code>ts</code>, <code>tn</code>, <code>tk</code> — to switch, create and kill tmux sessions from a fast, keyboard-driven list. One Rust binary, no runtime, no config.</p>
+  <ul class="chips">
+    <li><b>~400 KB</b> binary</li>
+    <li><b>~7 ms</b> to first frame</li>
+    <li><b>1</b> dependency (<span class="mono">libc</span>)</li>
+    <li>works inside <b>and</b> outside tmux</li>
+  </ul>
+  <div class="cta">
+    <a class="btn primary" href="#install">Install</a>
+    <a class="btn" href="https://github.com/rohitsx/tmux-ts">View on GitHub</a>
+  </div>
+</div>
+
+<section id="preview">
+  <div class="wrap">
+    <div class="grid3">
+      <figure class="term">
+<pre aria-label="ts: list of tmux sessions"><span class="l"> <b>tmux sessions</b>  <span class="d">4 sessions</span></span><span class="l"></span><span class="l">   <span class="d">1 </span>api         <span class="d"> 2 win</span>          <span class="d">3m</span></span><span class="l sel"> <span class="c b">❯ </span><span class="d">2 </span><b>notes</b>       <span class="d"> 1 win</span>          <span class="d">12m</span>   </span><span class="l">   <span class="d">3 </span>web         <span class="d"> 3 win</span>  <span class="g b">current </span>  <span class="d">now</span></span><span class="l">   <span class="g">+ new session</span></span><span class="l"></span><span class="l"> <span class="d">↑↓/jk move · ⏎ open · 1-9 jump · n new</span></span></pre>
+        <figcaption><code>ts</code> — pick a session</figcaption>
+      </figure>
+      <figure class="term">
+<pre aria-label="tn: new session prompt"><span class="l"> <span class="g b">new session</span></span><span class="l"></span><span class="l">   <span class="c">name ❯ </span>side-project</span><span class="l">   <span class="y">“api” already exists — ⏎ switches to it</span></span><span class="l"></span><span class="l"> <span class="d">⏎ create · esc cancel · empty = folder name</span></span></pre>
+        <figcaption><code>tn</code> — name it, hit enter</figcaption>
+      </figure>
+      <figure class="term">
+<pre aria-label="tk: multi-select kill"><span class="l"> <span class="r b">kill sessions</span>  <span class="d">4 sessions</span></span><span class="l"></span><span class="l"> <span class="c b">❯ </span><span class="r b">[x] </span><span class="d">1 </span><b>api</b></span><span class="l">   <span class="d">[ ] 2 </span>notes</span><span class="l">   <span class="r b">[x] </span><span class="d">3 </span>old-spike</span><span class="l">   <span class="d">[ ] 4 </span>web   <span class="g b">current</span></span><span class="l"></span><span class="l"> <span class="r b">Kill 2 sessions? press y to confirm</span></span></pre>
+        <figcaption><code>tk</code> — mark several, confirm once</figcaption>
+      </figure>
+    </div>
+  </div>
+</section>
+
+<section id="commands">
+  <div class="wrap">
+    <h2>Three commands, one binary</h2>
+    <p class="sub"><code>tn</code> and <code>tk</code> are symlinks to <code>ts</code>; the name it was started as picks the mode. Subcommands work too: <code>ts new</code>, <code>ts kill</code>.</p>
+    <div class="cards">
+      <div class="card"><h3><code class="cmd">ts</code> switch</h3><p>Lists every session with window count, <em>current</em>/<em>attached</em> tags and idle time. Enter opens it, <kbd>1</kbd>–<kbd>9</kbd> jumps straight to a row. A <strong>+ new session</strong> row (or <kbd>n</kbd>) creates one.</p></div>
+      <div class="card"><h3><code class="cmd">tn</code> new</h3><p>Asks for a name; empty uses the current folder name. If the name already exists it simply switches to it instead of erroring.</p></div>
+      <div class="card"><h3><code class="cmd">tk</code> kill</h3><p>Mark any number of sessions, press Enter, confirm with <kbd>y</kbd>. The session you're in is killed last, and you're warned if it's selected.</p></div>
+    </div>
+    <div class="note">Names are matched <em>exactly</em> (<code>work</code> never hits <code>work2</code>), and <code>.</code> / <code>:</code> become <code>_</code> as tmux does itself.</div>
+  </div>
+</section>
+
+<section id="install">
+  <div class="wrap">
+    <h2>Install</h2>
+    <p class="sub">Needs <code>tmux</code> and a Rust toolchain (<a href="https://rustup.rs">rustup</a>). Developed and tested on Linux; the code is plain POSIX and should build on macOS, but that hasn't been tried.</p>
+
+    <h3>Per user (recommended)</h3>
+    <div class="code"><button type="button" aria-label="Copy install commands">copy</button><pre><code>git clone https://github.com/rohitsx/tmux-ts.git
+cd tmux-ts
+./install.sh        <span class="cm"># builds, then installs ts / tn / tk into ~/.local/bin</span></code></pre></div>
+    <p>Make sure <code>~/.local/bin</code> is on your <code>PATH</code>. Use another directory with <code>BIN_DIR=/some/dir ./install.sh</code>.</p>
+
+    <h3>System-wide</h3>
+    <div class="code"><button type="button" aria-label="Copy system-wide install commands">copy</button><pre><code>cargo build --release
+sudo install -m755 target/release/ts /usr/local/bin/ts
+sudo ln -sf ts /usr/local/bin/tn
+sudo ln -sf ts /usr/local/bin/tk</code></pre></div>
+    <p>Build as yourself first — <code>sudo</code> usually can't see a rustup-installed <code>cargo</code>.</p>
+  </div>
+</section>
+
+<section id="keys">
+  <div class="wrap">
+    <h2>Keys</h2>
+    <p class="sub">Vim-style and arrow keys both work everywhere.</p>
+    <div class="tablewrap"><table>
+      <thead><tr><th>Where</th><th>Key</th><th>Action</th></tr></thead>
+      <tbody>
+        <tr><td>All screens</td><td><kbd>↑</kbd> <kbd>↓</kbd> <kbd>j</kbd> <kbd>k</kbd> <kbd>Ctrl-n</kbd> <kbd>Ctrl-p</kbd></td><td>Move (wraps around)</td></tr>
+        <tr><td>All screens</td><td><kbd>g</kbd> <kbd>G</kbd> <kbd>PgUp</kbd> <kbd>PgDn</kbd></td><td>Top / bottom / page</td></tr>
+        <tr><td>All screens</td><td><kbd>Esc</kbd> <kbd>q</kbd> <kbd>Ctrl-c</kbd></td><td>Quit</td></tr>
+        <tr><td><code>ts</code></td><td><kbd>Enter</kbd></td><td>Open the highlighted session</td></tr>
+        <tr><td><code>ts</code></td><td><kbd>1</kbd>–<kbd>9</kbd></td><td>Open that session immediately</td></tr>
+        <tr><td><code>ts</code></td><td><kbd>n</kbd> <kbd>+</kbd></td><td>New session prompt</td></tr>
+        <tr><td><code>tn</code></td><td><kbd>Enter</kbd> / <kbd>Ctrl-u</kbd> / <kbd>Ctrl-w</kbd></td><td>Create / clear line / delete word</td></tr>
+        <tr><td><code>tk</code></td><td><kbd>Space</kbd></td><td>Mark / unmark</td></tr>
+        <tr><td><code>tk</code></td><td><kbd>Tab</kbd></td><td>Mark and move to the next row</td></tr>
+        <tr><td><code>tk</code></td><td><kbd>a</kbd></td><td>Mark all (again to clear)</td></tr>
+        <tr><td><code>tk</code></td><td><kbd>1</kbd>–<kbd>9</kbd></td><td>Toggle that row</td></tr>
+        <tr><td><code>tk</code></td><td><kbd>Enter</kbd> then <kbd>y</kbd></td><td>Kill marked sessions (nothing marked = the highlighted one). Any other key cancels.</td></tr>
+      </tbody>
+    </table></div>
+  </div>
+</section>
+
+<section id="bindings">
+  <div class="wrap">
+    <h2>Open it with a tmux key</h2>
+    <p class="sub">Bind the commands to popups so they appear over whatever you're doing, then vanish.</p>
+    <div class="code"><button type="button" aria-label="Copy tmux bindings">copy</button><pre><code>bind s display-popup -E -w 70 -h 60% "ts"   <span class="cm"># prefix + s → switch</span>
+bind N display-popup -E -w 70 -h 10  "tn"   <span class="cm"># prefix + N → new</span>
+bind X display-popup -E -w 70 -h 60% "tk"   <span class="cm"># prefix + X → kill</span></code></pre></div>
+    <p>Put them in <code>~/.tmux.conf</code> and reload with <code>tmux source ~/.tmux.conf</code>. Note that <kbd>prefix</kbd> <kbd>s</kbd> replaces tmux's built-in session chooser — pick another key if you want to keep it.</p>
+  </div>
+</section>
+
+<section id="how">
+  <div class="wrap">
+    <h2>Why it's fast</h2>
+    <ul class="plain">
+      <li><strong>No TUI framework.</strong> Raw termios plus hand-written ANSI; every frame is built in memory and flushed with a single <code>write()</code>. It talks to <code>/dev/tty</code> directly, so it works in popups and with redirected stdio.</li>
+      <li><strong>One tmux process per run.</strong> Inside tmux, the “which session am I in?” query is chained into the same call as <code>list-sessions</code>.</li>
+      <li><strong>It gets out of the way.</strong> After you choose, <code>ts</code> <code>exec</code>s into <code>tmux switch-client</code> / <code>attach-session</code>, so it isn't resident while you work.</li>
+    </ul>
+    <p>Measured on the dev machine: about 6.7 ms median from launch to first frame and exit, of which a bare <code>tmux list-sessions</code> spawn is ~3.2 ms.</p>
+
+    <h3>Good to know</h3>
+    <details><summary>Inside vs. outside tmux</summary><p>Inside tmux, <code>ts</code> uses <code>switch-client</code> and tags the session you're in as <em>current</em>; the cursor starts on the most recently active <em>other</em> session. Outside tmux it uses <code>attach-session</code> / <code>new-session</code>, and with no tmux server running, <code>ts</code> and <code>tn</code> go straight to the new-session prompt.</p></details>
+    <details><summary>The terminal looks odd after a crash</summary><p>Run <code>reset</code>. <code>ts</code> restores the terminal on every normal exit, but a hard kill (<code>kill -9</code>) can't clean up after itself.</p></details>
+    <details><summary>Where's the config file?</summary><p>There isn't one — by design. Colours are the standard 16 ANSI colours plus one 256-colour highlight.</p></details>
+    <details><summary>Uninstall</summary><p><code>rm ~/.local/bin/{ts,tn,tk}</code> (or the same names in <code>/usr/local/bin</code> with <code>sudo</code>).</p></details>
+  </div>
+</section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <a href="https://github.com/rohitsx/tmux-ts">github.com/rohitsx/tmux-ts</a> · Written in Rust.
+  </div>
+</footer>
+
+<script>
+  document.querySelectorAll('.code button').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      var text = btn.parentElement.querySelector('pre').innerText.replace(/\s+#.*$/gm, '').trim();
+      var done = function () { btn.textContent = 'copied'; setTimeout(function () { btn.textContent = 'copy'; }, 1400); };
+      try {
+        navigator.clipboard.writeText(text).then(done, function () { btn.textContent = 'press Ctrl-C'; });
+      } catch (e) { btn.textContent = 'press Ctrl-C'; }
+    });
+  });
+</script>
+</body>
+</html>
